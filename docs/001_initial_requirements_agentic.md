@@ -11,7 +11,7 @@ This document outlines a comprehensive implementation plan for a custom NextDNS 
 - Platform support: Windows and Linux compatibility
 
 ### 2. NextDNS API Integration
-- Authentication: Client ID passed via CLI argument
+- Authentication: API key passed via CLI argument
 - API Documentation: https://nextdns.github.io/api/
 - Operations: Profile management and allowlist/denylist updates
 
@@ -63,7 +63,7 @@ nextdns_client/
    - gopkg.in/yaml.v2 for YAML parsing
    - net/http for API interactions
 2. Create basic project structure with directory organization
-3. Implement CLI argument parsing for client_id
+3. Implement CLI argument parsing for API key
 
 ### Phase 2: Configuration System
 1. Define YAML configuration structure for application groups:
@@ -129,7 +129,7 @@ nextdns_client/
 ### Implementation Components
 
 #### CLI Interface (cmd/root.go)
-- Parse client_id from command line argument
+- Parse API key from command line argument
 - Define application flags and help text
 - Initialize main application components
 
@@ -140,7 +140,7 @@ nextdns_client/
 - Provide read/write access to application groups
 
 #### API Client (internal/api/api.go)
-- Authenticate with NextDNS using client_id
+- Authenticate with NextDNS using API key
 - Implement API endpoints:
   - `GET /profile`
   - `POST /allowlist` and `DELETE /allowlist`
@@ -165,7 +165,7 @@ nextdns_client/
 - Build script for Windows (exe) and Linux (binary) outputs
 
 ## Security Considerations
-- Client credentials passed only via CLI arguments
+- API key passed only via CLI arguments
 - No credential storage in configuration files
 - Secure HTTP connections for API interactions
 - Input validation for all user inputs

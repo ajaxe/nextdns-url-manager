@@ -1,0 +1,16 @@
+applications:
+- name: Entertainment
+  urls:
+  - youtube.com
+  - netflix.com
+  - twitch.tv
+  enabled: false
+  timer: ""
+- name: Social Media
+  urls:
+  - facebook.com
+  - twitter.com
+  - instagram.com
+  - tiktok.com
+  enabled: false
+  timer: 5m

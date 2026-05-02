@@ -1,0 +1,45 @@
+# Go
+#
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with go test -c
+*.test
+
+# Architecture specific object files
+*.8
+*.6
+*.5
+
+# Asset bundle
+*.goassets
+
+# Folders
+/bin
+/pkg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.backup
+*.orig
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Other Go-specific
+cover.out
+*.out
+*.prof
+
+# Build artifacts
+dist/
+build/
+/nextdns-client
