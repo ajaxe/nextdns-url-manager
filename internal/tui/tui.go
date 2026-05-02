@@ -163,8 +163,8 @@ func (m Model) handleURLList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.urlCursor--
 			}
 
-			// If app is enabled, remove from NextDNS too
-			if app.Enabled {
+			// If app is disabled, remove from NextDNS too (since it was being blocked)
+			if !app.Enabled {
 				go m.apiClient.RemoveFromDenylist(urlToRemove)
 			}
 			config.Save(m.config, m.configPath)
@@ -177,9 +177,9 @@ func (m *Model) toggleApp(index int) {
 	app := &m.config.Applications[index]
 	app.Enabled = !app.Enabled
 
-	status := "Disabling"
+	status := "Blocking"
 	if app.Enabled {
-		status = "Enabling"
+		status = "Allowing"
 	}
 	m.message = fmt.Sprintf("%s NextDNS for %s...", status, app.Name)
 
@@ -193,9 +193,9 @@ func (m *Model) toggleApp(index int) {
 	go func() {
 		for _, url := range urls {
 			if enabled {
-				m.apiClient.AddToDenylist(url)
-			} else {
 				m.apiClient.RemoveFromDenylist(url)
+			} else {
+				m.apiClient.AddToDenylist(url)
 			}
 		}
 
@@ -256,8 +256,8 @@ func (m Model) handleURLInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			app := &m.config.Applications[m.activeApp]
 			app.URLs = append(app.URLs, m.urlInput)
 
-			// If app is enabled, add to NextDNS too
-			if app.Enabled {
+			// If app is disabled, add to NextDNS too (since it is currently blocked)
+			if !app.Enabled {
 				go m.apiClient.AddToDenylist(m.urlInput)
 			}
 			config.Save(m.config, m.configPath)

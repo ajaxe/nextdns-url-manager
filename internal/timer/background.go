@@ -26,16 +26,16 @@ func RunBackgroundCheck(apiClient *api.APIClient, cfg *config.Config, configPath
 
 		if t.GetRemainingTime() <= 0 {
 			// Timer expired!
-			fmt.Printf("[%s] Timer expired for %s. Disabling application group.\n", time.Now().Format(time.Kitchen), t.Name)
+			fmt.Printf("[%s] Timer expired for %s. Blocking application group.\n", time.Now().Format(time.Kitchen), t.Name)
 			
 			// Find the app in config
 			for i := range cfg.Applications {
 				if cfg.Applications[i].Name == t.TargetApp {
 					cfg.Applications[i].Enabled = false
 					
-					// Update NextDNS
+					// Update NextDNS: Block the URLs now that the "allow" period is over
 					for _, url := range cfg.Applications[i].URLs {
-						err := apiClient.RemoveFromDenylist(url)
+						err := apiClient.AddToDenylist(url)
 						if err != nil {
 							fmt.Printf("Error updating NextDNS for %s: %v\n", url, err)
 						}
