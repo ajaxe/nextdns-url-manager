@@ -63,6 +63,9 @@ var rootCmd = &cobra.Command{
 			fmt.Printf("Using profile: %s (%s)\n", profiles[0]["name"], profileID)
 		}
 
+		// Sync disabled apps to denylist on startup
+		api.SyncDisabledApps(apiClient, cfg)
+
 		// One-time background check on startup
 		timer.RunBackgroundCheck(apiClient, cfg, configPath)
 
@@ -107,6 +110,9 @@ var daemonCmd = &cobra.Command{
 
 		fmt.Println("Starting NextDNS Client Daemon...")
 		fmt.Println("Press Ctrl+C to stop")
+
+		// Sync disabled apps to denylist on startup
+		api.SyncDisabledApps(apiClient, cfg)
 
 		timer.StartDaemon(ctx, apiClient, cfg, configPath)
 
