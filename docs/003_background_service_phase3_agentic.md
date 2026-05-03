@@ -34,16 +34,16 @@ Services often run with a different working directory (e.g., `C:\Windows\System3
 
 ## Task List
 
-- [ ] **Logging**:
-    - [ ] Implement `SlogServiceHandler` in `internal/daemon/logging.go`.
-    - [ ] Update `internal/daemon/service.go` to initialize the system logger and set it as default.
-- [ ] **Persistence**:
-    - [ ] Refactor `internal/timer` to accept `statePath` or derive it from `configPath`.
-    - [ ] Update `internal/timer/background.go` to pass the correct path to `LoadState` and `SaveState`.
-- [ ] **Verification**:
-    - [ ] **Windows**: Check "Event Viewer" -> "Windows Logs" -> "Application" for logs from `NextDNS Client`.
-    - [ ] **Linux**: Manual verification by developer (see section below).
-    - [ ] **State**: Verify `timer_state.yaml` is created in the correct absolute path even when started as a service.
+- [ ] **Logging**: (priority: high)
+    - [ ] Implement `SlogServiceHandler` in `internal/daemon/logging.go`. (priority: high)
+    - [ ] Update `internal/daemon/service.go` to initialize the system logger and set it as default. (priority: high)
+- [ ] **Persistence**: (priority: high)
+    - [ ] Refactor `internal/timer` to accept `statePath` or derive it from `configPath`. (priority: high)
+    - [ ] Update `internal/timer/background.go` to pass the correct path to `LoadState` and `SaveState`. (priority: high)
+- [ ] **Verification**: (priority: high)
+    - [ ] **Windows**: Check "Event Viewer" -> "Windows Logs" -> "Application" for logs from `NextDNS Client`. (priority: high)
+    - [ ] **Linux**: Manual verification by developer (see section below). (priority: high)
+    - [ ] **State**: Verify `timer_state.yaml` is created in the correct absolute path even when started as a service. (priority: high)
 
 ## Verification Plan
 

@@ -50,14 +50,14 @@ type program struct {
 
 ## Task List
 
-- [ ] **Dependency**: Add `github.com/kardianos/service` to `go.mod`.
-- [ ] **Infrastructure**: Create `internal/daemon` directory.
-- [ ] **Code**: Implement `internal/daemon/service.go`.
-    - [ ] Define `program` struct.
-    - [ ] Implement `Start` (async execution).
-    - [ ] Implement `Stop` (graceful cancellation).
-    - [ ] Implement `GetConfig` helper to create `service.Config`.
-- [ ] **Integration**: Prepare a temporary test in `cmd/root.go` or a separate test file to verify the `program` struct can be initialized.
+- [ ] **Dependency**: Add `github.com/kardianos/service` to `go.mod`. (priority: high)
+- [ ] **Infrastructure**: Create `internal/daemon` directory. (priority: high)
+- [ ] **Code**: Implement `internal/daemon/service.go`. (priority: high)
+    - [ ] Define `program` struct. (priority: high)
+    - [ ] Implement `Start` (async execution). (priority: high)
+    - [ ] Implement `Stop` (graceful cancellation). (priority: high)
+    - [ ] Implement `GetConfig` helper to create `service.Config`. (priority: high)
+- [ ] **Integration**: Prepare a temporary test in `cmd/root.go` or a separate test file to verify the `program` struct can be initialized. (priority: high)
 
 ## Verification Plan
 1. **Unit Test**: Mock `timer.StartDaemon` (if possible) or use a short-lived context to verify `Start` and `Stop` trigger the correct internal state changes.

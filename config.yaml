@@ -1,8 +1,6 @@
 applications:
 - name: Entertainment
   urls:
-  - youtube.com
-  - netflix.com
   - twitch.tv
   enabled: false
   timer: ""

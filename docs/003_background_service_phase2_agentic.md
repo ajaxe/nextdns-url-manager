@@ -53,15 +53,15 @@ nextdns-client service
 
 ## Task List
 
-- [ ] **Infrastructure**: Create `cmd/service.go`.
-- [ ] **Code**: Implement `serviceCmd` and subcommands.
-    - [ ] Implement `install` with flag persistence in `Arguments`.
-    - [ ] Implement `run` calling `s.Run()`.
-    - [ ] Implement `start`, `stop`, `uninstall` using `service.Control`.
-- [ ] **Refinement**:
-    - [ ] Ensure absolute path resolution for `--config`.
-    - [ ] Add descriptive help text for each subcommand.
-- [ ] **Cleanup**: (Optional) Decide whether to deprecate `daemonCmd` or keep it for foreground debugging.
+- [ ] **Infrastructure**: Create `cmd/service.go`. (priority: high)
+- [ ] **Code**: Implement `serviceCmd` and subcommands. (priority: high)
+    - [ ] Implement `install` with flag persistence in `Arguments`. (priority: high)
+    - [ ] Implement `run` calling `s.Run()`. (priority: high)
+    - [ ] Implement `start`, `stop`, `uninstall` using `service.Control`. (priority: high)
+- [ ] **Refinement**: (priority: high)
+    - [ ] Ensure absolute path resolution for `--config`. (priority: high)
+    - [ ] Add descriptive help text for each subcommand. (priority: high)
+- [ ] **Cleanup**: (Optional) Decide whether to deprecate `daemonCmd` or keep it for foreground debugging. (priority: high)
 
 ## Verification Plan
 
