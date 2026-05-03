@@ -14,6 +14,7 @@ import (
 
 const (
 	viewMain       = "main"
+	viewAppInput   = "app_input"
 	viewTimerInput = "timer_input"
 	viewUrlInput   = "url_input"
 	viewUrlList    = "url_list"
@@ -37,7 +38,8 @@ type Model struct {
 	// Input states
 	timerInput string
 	urlInput   string
-	activeApp  int // Index of app being edited
+	appInput   string // for new app name input
+	activeApp  int  // Index of app being edited
 
 	// Debug logging
 	debugMode bool
@@ -89,6 +91,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch m.currentView {
+		case viewAppInput:
+			return m.handleAppInput(msg)
 		case viewTimerInput:
 			return m.handleTimerInput(msg)
 		case viewUrlInput:
@@ -130,6 +134,11 @@ func (m Model) handleMainView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.currentView = viewUrlList
 		m.activeApp = m.cursor
 		m.urlCursor = 0
+
+	case "a": // Add new app group
+		m.currentView = viewAppInput
+		m.activeApp = m.cursor
+		m.appInput = ""
 	}
 	return m, nil
 }
@@ -249,6 +258,40 @@ func (m Model) handleTimerInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleAppInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		if m.appInput != "" {
+			newApp := config.Application{
+				Name:    m.appInput,
+				URLs:    []string{},
+				Enabled: false,
+			}
+			m.config.Applications = append(m.config.Applications, newApp)
+			config.Save(m.config, m.configPath)
+			m.activeApp = len(m.config.Applications) - 1
+			m.urlInput = ""
+			m.currentView = viewUrlInput
+			m.message = fmt.Sprintf("Created app group '%s' — add URLs now", m.appInput)
+		}
+		m.appInput = ""
+
+	case "esc":
+		m.currentView = viewMain
+
+	case "backspace":
+		if len(m.appInput) > 0 {
+			m.appInput = m.appInput[:len(m.appInput)-1]
+		}
+
+	default:
+		if len(msg.String()) == 1 {
+			m.appInput += msg.String()
+		}
+	}
+	return m, nil
+}
+
 func (m Model) handleURLInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "enter":
@@ -291,6 +334,11 @@ func (m Model) View() string {
 		s.WriteString(fmt.Sprintf("Enter timer for %s (e.g., 1h30m, 5m, 70s):\n", m.config.Applications[m.activeApp].Name))
 		s.WriteString(inputStyle.Render(m.timerInput + "_"))
 		s.WriteString("\n\n(Enter to save, Esc to cancel, Backspace to clear)")
+
+	case viewAppInput:
+		s.WriteString("Enter new application group name:\n")
+		s.WriteString(inputStyle.Render(m.appInput + "_"))
+		s.WriteString("\n\n(Enter to save and add URLs, Esc to cancel, Backspace to clear)")
 
 	case viewUrlInput:
 		s.WriteString(fmt.Sprintf("Add URL for %s:\n", m.config.Applications[m.activeApp].Name))
@@ -354,7 +402,7 @@ func (m Model) View() string {
 			s.WriteString(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)) + "\n\n")
 		}
 
-		s.WriteString(helpStyle.Render("↑/↓: navigate • Space: toggle • t: timer • Enter: edit URLs • q: quit"))
+		s.WriteString(helpStyle.Render("↑/↓: navigate • Space: toggle • t: timer • Enter: edit URLs • a: add app • q: quit"))
 	}
 
 	if m.debugMode {

@@ -69,6 +69,12 @@ func StartDaemon(ctx context.Context, apiClient *api.APIClient, cfg *config.Conf
 	for {
 		select {
 		case <-ticker.C:
+			if updatedCfg, err := config.Load(configPath); err == nil {
+				cfg = updatedCfg
+			} else {
+				fmt.Printf("Warning: Failed to hot-reload config: %v\n", err)
+			}
+
 			if err := RunBackgroundCheck(apiClient, cfg, configPath); err != nil {
 				fmt.Printf("Background check error: %v\n", err)
 			}
