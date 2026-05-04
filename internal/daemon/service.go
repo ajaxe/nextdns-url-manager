@@ -19,10 +19,9 @@ type Program struct {
 	apiKey      string
 	profileID   string
 	configPath  string
+	configFile  string
 	cancel      context.CancelFunc
 	done        chan struct{}
-	configFile  string
-	configStore map[string]string
 }
 
 // Config returns the default service configuration.
@@ -98,10 +97,15 @@ func (p *Program) Stop(s service.Service) error {
 // configPath is persisted to service.Config.Arguments for the daemon to read.
 func NewProgram(apiKey, profileID, configPath string) (*Program, error) {
 	program := &Program{
-		configPath:  configPath,
-		configFile:  configPath,
-		configStore: make(map[string]string),
-		done:        make(chan struct{}),
+		configPath: configPath,
+		configFile: configPath,
+		done:       make(chan struct{}),
+	}
+
+	// Resolve to absolute path
+	if abs, err := filepath.Abs(program.configPath); err == nil {
+		program.configPath = abs
+		program.configFile = abs
 	}
 
 	// For lifecycle commands invoked via service binary, read arguments from the service
@@ -150,7 +154,6 @@ func (p *Program) SetServiceArgs(flags []string) {
 		case "--config", "-c":
 			if i+1 < len(flags) {
 				p.configFile = flags[i+1]
-				p.configPath = flags[i+1]
 				i++
 			}
 		case "--profile-id", "-p":
@@ -160,12 +163,16 @@ func (p *Program) SetServiceArgs(flags []string) {
 			}
 		}
 	}
+	p.configPath = p.configFile
 }
 
 // GetServiceConfigArgs extracts the service config Arguments for a Program.
-// Returns flags for --config and --profile-id (non-sensitive path/ID only).
+// Returns flags for --api-key, --config, --profile-id.
 func (p *Program) GetServiceConfigArgs() []string {
 	var args []string
+	if p.apiKey != "" {
+		args = append(args, "--api-key", p.apiKey)
+	}
 	if p.configPath != "" {
 		args = append(args, "--config", p.configPath)
 	}
@@ -184,58 +191,76 @@ func (p *Program) getConfigDir() string {
 }
 
 // Install creates a service and installs it.
-func Install(program *Program) error {
-	cfg := Config()
-
-	var args []string
-	if len(os.Args) > 2 {
-		args = []string{filepath.Base(os.Args[0]), "--config", program.configPath}
-		cfg.DisplayName = os.Args[2]
-	}
-
-	cfg.Arguments = args
-
-	s, err := service.New(program, cfg)
+func Install(svcConfig *service.Config) error {
+	s, err := service.New(&Program{}, svcConfig)
 	if err != nil {
 		return err
 	}
 	return s.Install()
 }
 
-// Start creates a service and starts it.
-func Start(program *Program) error {
-	s, err := service.New(program, Config())
+// StartService creates a service and starts it.
+func StartService(svcConfig *service.Config) error {
+	s, err := service.New(&Program{}, svcConfig)
 	if err != nil {
 		return err
 	}
 	return s.Start()
 }
 
-// Stop creates a service and stops it.
-func Stop(program *Program) error {
-	s, err := service.New(program, Config())
+// StopService creates a service and stops it.
+func StopService(svcConfig *service.Config) error {
+	s, err := service.New(&Program{}, svcConfig)
 	if err != nil {
 		return err
 	}
 	return s.Stop()
 }
 
-// Uninstall creates a service and uninstalls it.
-func Uninstall(program *Program) error {
-	s, err := service.New(program, Config())
+// UninstallService creates a service and uninstalls it.
+func UninstallService(svcConfig *service.Config) error {
+	s, err := service.New(&Program{}, svcConfig)
 	if err != nil {
 		return err
 	}
 	return s.Uninstall()
 }
 
-// GetStatus creates a service and returns its status.
-func GetStatus(program *Program) (service.Status, error) {
-	s, err := service.New(program, Config())
+// GetServiceStatus creates a service and returns its status.
+func GetServiceStatus(svcConfig *service.Config) (service.Status, error) {
+	s, err := service.New(&Program{}, svcConfig)
 	if err != nil {
 		return 0, err
 	}
 	return s.Status()
+}
+
+// --- Backward-compatible wrappers for daemon commands in root.go ---
+
+// InstallProgram is a backward-compatible alias for Install.
+func InstallProgram(program *Program) error {
+	cfg := Config()
+	return Install(cfg)
+}
+
+// StartProgram is a backward-compatible alias for StartService.
+func StartProgram(program *Program) error {
+	return StartService(Config())
+}
+
+// StopProgram is a backward-compatible alias for StopService.
+func StopProgram(program *Program) error {
+	return StopService(Config())
+}
+
+// UninstallProgram is a backward-compatible alias for UninstallService.
+func UninstallProgram(program *Program) error {
+	return UninstallService(Config())
+}
+
+// GetStatusProgram is a backward-compatible alias for GetServiceStatus.
+func GetStatusProgram(program *Program) (service.Status, error) {
+	return GetServiceStatus(Config())
 }
 
 // Wait waits for the program to complete.

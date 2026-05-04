@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,10 +9,12 @@ import (
 
 	"nextdns_client/internal/api"
 	"nextdns_client/internal/config"
+	"nextdns_client/internal/daemon"
 	"nextdns_client/internal/timer"
 	"nextdns_client/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
 )
 
@@ -80,6 +81,12 @@ var rootCmd = &cobra.Command{
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "Run the background timer daemon",
+	Long:  "Run the NextDNS daemon, either interactively or as a managed system service",
+}
+
+var daemonRunCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run the daemon interactively",
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, _ := cmd.Flags().GetString("api-key")
 		profileID, _ := cmd.Flags().GetString("profile-id")
@@ -90,33 +97,151 @@ var daemonCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		cfg, err := config.Load(configPath)
+		program, err := daemon.NewProgram(apiKey, profileID, configPath)
 		if err != nil {
-			fmt.Printf("Error loading config: %v\n", err)
+			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		apiClient := api.NewAPIClient(apiKey, profileID)
-		if profileID == "" {
-			profiles, _ := apiClient.ListProfiles()
-			if len(profiles) > 0 {
-				profileID = profiles[0]["id"].(string)
-				apiClient.SetProfileID(profileID)
-			}
+		svcConfig := daemon.Config()
+		if service.Interactive() {
+			fmt.Println("Starting NextDNS Client Daemon...")
 		}
 
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
+		svc, err := service.New(program, svcConfig)
+		if err != nil {
+			fmt.Printf("Error creating service: %v\n", err)
+			os.Exit(1)
+		}
 
-		fmt.Println("Starting NextDNS Client Daemon...")
-		fmt.Println("Press Ctrl+C to stop")
+		if service.Interactive() {
+			quit := make(chan os.Signal, 1)
+			signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+			defer signal.Stop(quit)
 
-		// Sync disabled apps to denylist on startup
-		api.SyncDisabledApps(apiClient, cfg)
+			if err := svc.Run(); err != nil {
+				fmt.Printf("Error starting daemon: %v\n", err)
+				os.Exit(1)
+			}
 
-		timer.StartDaemon(ctx, apiClient, cfg, configPath)
+			<-quit
+			fmt.Println("\nShutting down daemon...")
+		} else {
+			if err := svc.Run(); err != nil {
+				fmt.Printf("Error starting daemon: %v\n", err)
+				os.Exit(1)
+			}
+		}
+	},
+}
 
-		fmt.Println("Daemon exited cleanly.")
+var daemonInstallCmd = &cobra.Command{
+	Use:   "install",
+	Short: "Install the daemon as a system service",
+	Run: func(cmd *cobra.Command, args []string) {
+		apiKey, _ := cmd.Flags().GetString("api-key")
+		profileID, _ := cmd.Flags().GetString("profile-id")
+		configPath, _ := cmd.Flags().GetString("config")
+
+		program, err := daemon.NewProgram(apiKey, profileID, configPath)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := daemon.InstallProgram(program); err != nil {
+			fmt.Printf("Error installing service: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Daemon successfully installed.")
+	},
+}
+
+var daemonStartCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Start the installed daemon",
+	Run: func(cmd *cobra.Command, args []string) {
+		program, err := daemon.NewProgram("", "", "")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := daemon.StartProgram(program); err != nil {
+			fmt.Printf("Error starting service: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Daemon started.")
+	},
+}
+
+var daemonStopCmd = &cobra.Command{
+	Use:   "stop",
+	Short: "Stop the installed daemon",
+	Run: func(cmd *cobra.Command, args []string) {
+		program, err := daemon.NewProgram("", "", "")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := daemon.StopProgram(program); err != nil {
+			fmt.Printf("Error stopping service: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Daemon stopped.")
+	},
+}
+
+var daemonUninstallCmd = &cobra.Command{
+	Use:   "uninstall",
+	Short: "Uninstall the daemon",
+	Run: func(cmd *cobra.Command, args []string) {
+		program, err := daemon.NewProgram("", "", "")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := daemon.UninstallProgram(program); err != nil {
+			fmt.Printf("Error uninstalling service: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Daemon uninstalled.")
+	},
+}
+
+var daemonStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Display the daemon status",
+	Run: func(cmd *cobra.Command, args []string) {
+		program, err := daemon.NewProgram("", "", "")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		status, err := daemon.GetStatusProgram(program)
+		if err != nil {
+			fmt.Printf("Error getting service status: %v\n", err)
+			os.Exit(1)
+		}
+
+		var statusStr string
+		switch status {
+		case service.StatusRunning:
+			statusStr = "running"
+		case service.StatusStopped:
+			statusStr = "stopped"
+		default:
+			statusStr = "unknown"
+		}
+
+		fmt.Printf("Current status: %s\n", statusStr)
 	},
 }
 
@@ -126,7 +251,6 @@ func Execute() {
 	}
 	f, err := os.OpenFile("./app.log", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0664)
 	if err != nil {
-		// Handle error (e.g., log to stderr or panic)
 		panic(err)
 	}
 	handler := slog.NewJSONHandler(f, opts)
@@ -145,6 +269,17 @@ func init() {
 	daemonCmd.Flags().StringP("api-key", "k", "", "API Key for NextDNS authentication")
 	daemonCmd.Flags().StringP("profile-id", "p", "", "Profile ID for NextDNS configuration")
 	daemonCmd.Flags().StringP("config", "c", "config.yaml", "Path to configuration file")
+	daemonRunCmd.Flags().StringP("api-key", "k", "", "API Key for NextDNS authentication")
+	daemonRunCmd.Flags().StringP("profile-id", "p", "", "Profile ID for NextDNS configuration")
+	daemonRunCmd.Flags().StringP("config", "c", "config.yaml", "Path to configuration file")
 
 	rootCmd.AddCommand(daemonCmd)
+	daemonCmd.AddCommand(daemonRunCmd)
+	daemonCmd.AddCommand(daemonInstallCmd)
+	daemonCmd.AddCommand(daemonStartCmd)
+	daemonCmd.AddCommand(daemonStopCmd)
+	daemonCmd.AddCommand(daemonUninstallCmd)
+	daemonCmd.AddCommand(daemonStatusCmd)
+
+	rootCmd.AddCommand(serviceCmd)
 }
