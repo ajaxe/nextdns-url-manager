@@ -44,3 +44,4 @@ dist/
 build/
 /nextdns-client
 *.log
+.codebase-memory

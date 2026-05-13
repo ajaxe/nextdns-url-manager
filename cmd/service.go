@@ -66,8 +66,8 @@ var serviceInstallCmd = &cobra.Command{
 }
 
 var serviceRunCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Entry point for the OS service manager (internal)",
+	Use:    "run",
+	Short:  "Entry point for the OS service manager (internal)",
 	Hidden: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, _ := cmd.Flags().GetString("api-key")

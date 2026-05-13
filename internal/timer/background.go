@@ -3,6 +3,7 @@ package timer
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"nextdns_client/internal/api"
@@ -26,18 +27,18 @@ func RunBackgroundCheck(apiClient *api.APIClient, cfg *config.Config, configPath
 
 		if t.GetRemainingTime() <= 0 {
 			// Timer expired!
-			fmt.Printf("[%s] Timer expired for %s. Blocking application group.\n", time.Now().Format(time.Kitchen), t.Name)
-			
+			slog.Info("Timer expired", "timer", t.Name, "target_app", t.TargetApp)
+
 			// Find the app in config
 			for i := range cfg.Applications {
 				if cfg.Applications[i].Name == t.TargetApp {
 					cfg.Applications[i].Enabled = false
-					
+
 					// Update NextDNS: Block the URLs now that the "allow" period is over
 					for _, url := range cfg.Applications[i].URLs {
 						err := apiClient.AddToDenylist(url)
 						if err != nil {
-							fmt.Printf("Error updating NextDNS for %s: %v\n", url, err)
+							slog.Error("Error updating NextDNS", "url", url, "error", err)
 						}
 					}
 					changed = true
@@ -72,14 +73,14 @@ func StartDaemon(ctx context.Context, apiClient *api.APIClient, cfg *config.Conf
 			if updatedCfg, err := config.Load(configPath); err == nil {
 				cfg = updatedCfg
 			} else {
-				fmt.Printf("Warning: Failed to hot-reload config: %v\n", err)
+				slog.Warn("Failed to hot-reload config", "error", err)
 			}
 
 			if err := RunBackgroundCheck(apiClient, cfg, configPath); err != nil {
-				fmt.Printf("Background check error: %v\n", err)
+				slog.Error("Background check error", "error", err)
 			}
 		case <-ctx.Done():
-			fmt.Println("Daemon stopping...")
+			slog.Info("Daemon stopping")
 			return
 		}
 	}

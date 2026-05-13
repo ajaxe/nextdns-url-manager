@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,12 +17,13 @@ import (
 
 // Program implements service.Service and manages the daemon lifecycle.
 type Program struct {
-	apiKey      string
-	profileID   string
-	configPath  string
-	configFile  string
-	cancel      context.CancelFunc
-	done        chan struct{}
+	apiKey     string
+	profileID  string
+	configPath string
+	configFile string
+	statePath  string
+	cancel     context.CancelFunc
+	done       chan struct{}
 }
 
 // Config returns the default service configuration.
@@ -36,9 +38,15 @@ func Config() *service.Config {
 func (p *Program) Start(s service.Service) error {
 	p.done = make(chan struct{})
 
+	// Initialize system logger
+	logger, err := s.Logger(nil)
+	if err == nil {
+		InitServiceLogger(logger)
+	}
+
 	go func() {
 		if err := p.run(); err != nil {
-			fmt.Fprintf(os.Stderr, "daemon error: %v\n", err)
+			slog.Error("daemon error", "error", err)
 		}
 	}()
 
@@ -67,10 +75,13 @@ func (p *Program) run() error {
 		}
 		p.profileID = profiles[0]["id"].(string)
 		apiClient.SetProfileID(p.profileID)
-		fmt.Printf("Using profile: %s (%s)\n", profiles[0]["name"], p.profileID)
 	}
 
 	api.SyncDisabledApps(apiClient, cfg)
+
+	// Derive timer state path from config path
+	stateDir := p.getConfigDir()
+	timer.SetStateDir(stateDir)
 
 	timer.StartDaemon(ctx, apiClient, cfg, p.configPath)
 
@@ -127,8 +138,6 @@ func NewProgram(apiKey, profileID, configPath string) (*Program, error) {
 			}
 		}
 	}
-
-
 
 	// For install/start/stop/status: allow setting credentials from constructor
 	if apiKey != "" {

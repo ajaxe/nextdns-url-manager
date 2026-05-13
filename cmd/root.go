@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"nextdns_client/internal/api"
@@ -63,6 +63,12 @@ var rootCmd = &cobra.Command{
 			apiClient.SetProfileID(profileID)
 			fmt.Printf("Using profile: %s (%s)\n", profiles[0]["name"], profileID)
 		}
+
+		// Resolve app dir for state/logging
+		appDir, _ := os.Getwd()
+
+		// Set timer state directory
+		timer.SetStateDir(appDir)
 
 		// Sync disabled apps to denylist on startup
 		api.SyncDisabledApps(apiClient, cfg)
@@ -246,15 +252,14 @@ var daemonStatusCmd = &cobra.Command{
 }
 
 func Execute() {
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug, // Setting min level to Debug
-	}
-	f, err := os.OpenFile("./app.log", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0664)
+	// Resolve log file to absolute path
+	absLogPath, err := filepath.Abs("./app.log")
 	if err != nil {
+		panic(fmt.Sprintf("resolving log path: %v", err))
+	}
+	if err := daemon.InitCLILogger(absLogPath); err != nil {
 		panic(err)
 	}
-	handler := slog.NewJSONHandler(f, opts)
-	slog.SetDefault(slog.New(handler))
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

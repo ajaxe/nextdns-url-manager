@@ -39,7 +39,7 @@ type Model struct {
 	timerInput string
 	urlInput   string
 	appInput   string // for new app name input
-	activeApp  int  // Index of app being edited
+	activeApp  int    // Index of app being edited
 
 	// Debug logging
 	debugMode bool

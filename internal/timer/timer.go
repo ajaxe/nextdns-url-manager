@@ -2,6 +2,7 @@ package timer
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -30,7 +31,7 @@ func ParseTimer(s string) (time.Duration, error) {
 	// "1m 5s" -> "1m5s"
 	re := regexp.MustCompile(`(\d+)\s+([a-zA-Z]+)`)
 	s = re.ReplaceAllString(s, "$1$2")
-	
+
 	// Remove all remaining spaces just in case
 	s = strings.ReplaceAll(s, " ", "")
 
@@ -43,7 +44,22 @@ type TimerState struct {
 	Timers []Timer `yaml:"timers"`
 }
 
-const timerStateFile = "timer_state.yaml"
+const defaultStateFile = "timer_state.yaml"
+
+var stateDir string
+
+// SetStateDir sets the directory for the timer state file.
+func SetStateDir(dir string) {
+	stateDir = dir
+}
+
+func getStateFilePath() string {
+	dir := stateDir
+	if dir == "" {
+		dir = "."
+	}
+	return filepath.Join(dir, defaultStateFile)
+}
 
 // SaveState saves the timer state to a file
 func SaveState(state *TimerState) error {
@@ -51,12 +67,12 @@ func SaveState(state *TimerState) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(timerStateFile, data, 0644)
+	return os.WriteFile(getStateFilePath(), data, 0644)
 }
 
 // LoadState loads the timer state from a file
 func LoadState() (*TimerState, error) {
-	data, err := os.ReadFile(timerStateFile)
+	data, err := os.ReadFile(getStateFilePath())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &TimerState{Timers: []Timer{}}, nil
@@ -78,7 +94,7 @@ func AddTimer(name string, duration time.Duration, targetApp string) error {
 		return err
 	}
 
-	timer := Timer{
+	t := Timer{
 		Name:      name,
 		Duration:  duration,
 		Start:     time.Now(),
@@ -93,7 +109,7 @@ func AddTimer(name string, duration time.Duration, targetApp string) error {
 			newTimers = append(newTimers, t)
 		}
 	}
-	state.Timers = append(newTimers, timer)
+	state.Timers = append(newTimers, t)
 
 	return SaveState(state)
 }

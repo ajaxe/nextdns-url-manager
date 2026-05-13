@@ -13,10 +13,10 @@ type Config struct {
 
 // Application represents an application group configuration
 type Application struct {
-	Name   string   `yaml:"name"`
-	URLs   []string `yaml:"urls"`
-	Enabled bool    `yaml:"enabled"`
-	Timer  string   `yaml:"timer"`
+	Name    string   `yaml:"name"`
+	URLs    []string `yaml:"urls"`
+	Enabled bool     `yaml:"enabled"`
+	Timer   string   `yaml:"timer"`
 }
 
 // Load reads the configuration from a YAML file
@@ -69,13 +69,13 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Applications: []Application{
 			{
-				Name: "Entertainment",
-				URLs: []string{"youtube.com", "netflix.com", "twitch.tv"},
+				Name:    "Entertainment",
+				URLs:    []string{"youtube.com", "netflix.com", "twitch.tv"},
 				Enabled: false,
 			},
 			{
-				Name: "Social Media",
-				URLs: []string{"facebook.com", "twitter.com", "instagram.com", "tiktok.com"},
+				Name:    "Social Media",
+				URLs:    []string{"facebook.com", "twitter.com", "instagram.com", "tiktok.com"},
 				Enabled: false,
 			},
 		},
