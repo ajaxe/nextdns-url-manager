@@ -51,21 +51,34 @@ function Ensure-Dir {
 function Start-Build {
     param(
         [string]$OutputFile,
-        [string]$LDFlags
+        [string]$LDFlags,
+        [string]$TargetOS,
+        [string]$TargetArch
     )
     $output = [System.IO.Path]::GetFullPath($OutputFile)
-    Write-Host "  Building -> $output" -ForegroundColor Cyan
-    $env:GOOS = $GOOS
-    $env:GOARCH = $GOARCH
-    go build -ldflags="$LDFlags" -o $output $GoFiles
-    $LASTEXITCODE | Out-Host
+    Write-Host "  Building for $TargetOS/$TargetArch -> $output" -ForegroundColor Cyan
+    
+    # Save current env
+    $oldOS = $env:GOOS
+    $oldArch = $env:GOARCH
+    
+    try {
+        $env:GOOS = $TargetOS
+        $env:GOARCH = $TargetArch
+        go build -ldflags="$LDFlags" -o $output $GoFiles
+    }
+    finally {
+        # Restore env
+        $env:GOOS = $oldOS
+        $env:GOARCH = $oldArch
+    }
 }
 
 # Main logic
 $ErrorActionPreference = "Stop"
 
-$GOOS = $(Get-GOOS)
-$GOARCH = $(Get-GOARCH)
+$HOST_OS = $(Get-GOOS)
+$HOST_ARCH = $(Get-GOARCH)
 $VERSION = $(Get-Version)
 $BUILD_DATE = $(Get-BuildDate)
 $GO_LDFLAGS = "-X main.version=$VERSION -X main.buildDate=$BUILD_DATE"
@@ -75,17 +88,17 @@ Write-Host "nextdns-client build system"
 switch ($Task.ToLower()) {
     "build" {
         Write-Host "Build target: $Task"
-        Write-Host "  GOOS: $GOOS"
-        Write-Host "  GOARCH: $GOARCH"
+        Write-Host "  GOOS: $HOST_OS"
+        Write-Host "  GOARCH: $HOST_ARCH"
         Write-Host "  Version: $VERSION"
         Write-Host "  Date: $BUILD_DATE"
 
         Ensure-Dir "$ProjectRoot/$BuildDir"
         $ext = ""
-        if ($GOOS -eq "windows") {
+        if ($HOST_OS -eq "windows") {
             $ext = ".exe"
         }
-        Start-Build "$ProjectRoot/$BuildDir/$BinaryName$ext" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$BuildDir/$BinaryName$ext" -LDFlags $GO_LDFLAGS -TargetOS $HOST_OS -TargetArch $HOST_ARCH
     }
 
     "dist" {
@@ -94,28 +107,22 @@ switch ($Task.ToLower()) {
         Write-Host "Cross-platform distribution build"
 
         # Windows x64
-        $env:os = "windows"; $env:arch = "amd64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName.exe" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName.exe" -LDFlags $GO_LDFLAGS -TargetOS "windows" -TargetArch "amd64"
 
         # Windows x86
-        $env:os = "windows"; $env:arch = "386"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-32bit.exe" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-32bit.exe" -LDFlags $GO_LDFLAGS -TargetOS "windows" -TargetArch "386"
 
         # Linux x64
-        $env:os = "linux"; $env:arch = "amd64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-linux-amd64" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-linux-amd64" -LDFlags $GO_LDFLAGS -TargetOS "linux" -TargetArch "amd64"
 
         # Linux x86
-        $env:os = "linux"; $env:arch = "386"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-linux-386" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-linux-386" -LDFlags $GO_LDFLAGS -TargetOS "linux" -TargetArch "386"
 
         # macOS x64
-        $env:os = "darwin"; $env:arch = "amd64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-darwin-amd64" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-darwin-amd64" -LDFlags $GO_LDFLAGS -TargetOS "darwin" -TargetArch "amd64"
 
         # macOS ARM64
-        $env:os = "darwin"; $env:arch = "arm64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-darwin-arm64" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-darwin-arm64" -LDFlags $GO_LDFLAGS -TargetOS "darwin" -TargetArch "arm64"
 
         Write-Host "Cross-platform binaries created successfully" -ForegroundColor Green
     }
@@ -123,43 +130,37 @@ switch ($Task.ToLower()) {
     "win64" {
         Write-Host "Build target: $Task"
         Ensure-Dir "$ProjectRoot/$DistDir"
-        $env:os = "windows"; $env:arch = "amd64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName.exe" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName.exe" -LDFlags $GO_LDFLAGS -TargetOS "windows" -TargetArch "amd64"
     }
 
     "win32" {
         Write-Host "Build target: $Task"
         Ensure-Dir "$ProjectRoot/$DistDir"
-        $env:os = "windows"; $env:arch = "386"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-32bit.exe" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-32bit.exe" -LDFlags $GO_LDFLAGS -TargetOS "windows" -TargetArch "386"
     }
 
     "linux64" {
         Write-Host "Build target: $Task"
         Ensure-Dir "$ProjectRoot/$DistDir"
-        $env:os = "linux"; $env:arch = "amd64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-linux-amd64" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-linux-amd64" -LDFlags $GO_LDFLAGS -TargetOS "linux" -TargetArch "amd64"
     }
 
     "linux32" {
         Write-Host "Build target: $Task"
         Ensure-Dir "$ProjectRoot/$DistDir"
-        $env:os = "linux"; $env:arch = "386"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-linux-386" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-linux-386" -LDFlags $GO_LDFLAGS -TargetOS "linux" -TargetArch "386"
     }
 
     "mac64" {
         Write-Host "Build target: $Task"
         Ensure-Dir "$ProjectRoot/$DistDir"
-        $env:os = "darwin"; $env:arch = "amd64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-darwin-amd64" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-darwin-amd64" -LDFlags $GO_LDFLAGS -TargetOS "darwin" -TargetArch "amd64"
     }
 
     "macarm64" {
         Write-Host "Build target: $Task"
         Ensure-Dir "$ProjectRoot/$DistDir"
-        $env:os = "darwin"; $env:arch = "arm64"
-        Start-Build "$ProjectRoot/$DistDir/$BinaryName-darwin-arm64" $GO_LDFLAGS
+        Start-Build -OutputFile "$ProjectRoot/$DistDir/$BinaryName-darwin-arm64" -LDFlags $GO_LDFLAGS -TargetOS "darwin" -TargetArch "arm64"
     }
 
     "cross-platform" {
