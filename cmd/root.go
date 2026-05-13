@@ -76,9 +76,16 @@ var rootCmd = &cobra.Command{
 		// One-time background check on startup
 		timer.RunBackgroundCheck(apiClient, cfg, configPath)
 
+		if !service.Interactive() {
+			fmt.Println("Error: The terminal UI cannot be started in a non-interactive environment.")
+			fmt.Println("If you intended to run this as a background service, use: nextdns-client service run")
+			fmt.Println("See 'nextdns-client service --help' for more information.")
+			os.Exit(1)
+		}
+
 		p := tea.NewProgram(tui.NewModel(apiKey, profileID, cfg, apiClient, configPath, debug))
 		if _, err := p.Run(); err != nil {
-			fmt.Printf("Alas, there's been an error: %v", err)
+			fmt.Printf("Alas, there's been an error: %v\n", err)
 			os.Exit(1)
 		}
 	},

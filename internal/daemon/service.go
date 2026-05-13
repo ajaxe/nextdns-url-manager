@@ -176,9 +176,9 @@ func (p *Program) SetServiceArgs(flags []string) {
 }
 
 // GetServiceConfigArgs extracts the service config Arguments for a Program.
-// Returns flags for --api-key, --config, --profile-id.
+// Returns flags for --api-key, --config, --profile-id, prefixed with 'service' and 'run'.
 func (p *Program) GetServiceConfigArgs() []string {
-	var args []string
+	args := []string{"service", "run"}
 	if p.apiKey != "" {
 		args = append(args, "--api-key", p.apiKey)
 	}
@@ -249,6 +249,7 @@ func GetServiceStatus(svcConfig *service.Config) (service.Status, error) {
 // InstallProgram is a backward-compatible alias for Install.
 func InstallProgram(program *Program) error {
 	cfg := Config()
+	cfg.Arguments = program.GetServiceConfigArgs()
 	return Install(cfg)
 }
 
